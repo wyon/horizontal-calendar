@@ -13,16 +13,17 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class HorizonCalendarView extends ViewPager {
+public class HorizonCalendarView extends ViewPager implements AdapterView.OnItemClickListener {
 
 	public static final String TAG = HorizonCalendarView.class.getSimpleName();
 
-	private static final String[] WEEK_NAME = { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
+	private static final String[] WEEK_NAME = { "日", "一", "二", "三", "四", "五", "六" };
 	private static final int PAGE_COUNT = 100;
 
 	private GridView[] viewPageList = new GridView[4];
@@ -65,7 +66,18 @@ public class HorizonCalendarView extends ViewPager {
 		gridView.setHorizontalSpacing(1);
 		gridView.setAdapter(new CalendarItemsAdapter());
 		gridView.setLayoutParams(params);
+		gridView.setOnItemClickListener(this);
 		return gridView;
+	}
+
+	public void selectDate(DateHolder date) {
+		// if (date == null)
+		// return;
+		// s
+	}
+
+	public DateHolder getToday() {
+		return this.todayHolder;
 	}
 
 	class CalendarAdpater extends PagerAdapter {
@@ -128,6 +140,7 @@ public class HorizonCalendarView extends ViewPager {
 
 	class CalendarItemsAdapter extends BaseAdapter {
 		DateHolder[] dates = new DateHolder[7];
+		private int selectedPosition = -1;
 
 		public void computeCalendar(DateHolder start, int weekOffset) {
 			Log.i(TAG, "computeCalendar: start=" + start + "; weekOffset=" + weekOffset);
@@ -148,6 +161,28 @@ public class HorizonCalendarView extends ViewPager {
 			}
 		}
 
+		public void clearSelected() {
+			selectedItem(-1);
+		}
+
+		public DateHolder selectedItem(int position) {
+			if (position < 0 || position >= dates.length) { // clear selected
+				if (selectedPosition >= 0) { // had selected
+					dates[selectedPosition].tvDay.setSelected(false);
+					selectedPosition = -1;
+				}
+				return null;
+			}
+			if (position != selectedPosition) {
+				dates[position].tvDay.setSelected(true);
+				if (selectedPosition >= 0) {
+					dates[selectedPosition].tvDay.setSelected(false);
+				}
+				selectedPosition = position;
+			}
+			return dates[position];
+		}
+
 		@Override
 		public int getCount() {
 			return dates.length;
@@ -165,28 +200,80 @@ public class HorizonCalendarView extends ViewPager {
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			TextView tvWeekName, tvDay;
+			DateHolder date = (DateHolder) getItem(position);
+			
+			Log.i(TAG, "getView convertView == null" + (convertView == null) + "date:" + date);
+			
 			if (convertView == null) {
 				LayoutInflater inflater = LayoutInflater.from(getContext());
 				convertView = inflater.inflate(R.layout.calendar_item, null);
+			}else{
+				if(date == convertView.getTag()){
+//					
+//					Log.i(TAG, "convertView tag same");
+//					//((TextView) convertView.findViewById(R.id.tv_day)).setSelected(true);
+//					
+					return convertView;
+				}
 			}
+			
+			convertView.setTag(date);
+			
+			TextView tvWeekName, tvDay;
+			
 			tvWeekName = (TextView) convertView.findViewById(R.id.tv_week_name);
 			tvDay = (TextView) convertView.findViewById(R.id.tv_day);
-
-			DateHolder date = (DateHolder) getItem(position);
+			
 			tvWeekName.setText(WEEK_NAME[position]);
 			tvDay.setText(String.valueOf(date.day));
 
+			date.tvDay = tvDay;
+
+			int selectorID = R.drawable.selector_calendar_notoday;
+			if (date.equals(todayHolder)) {
+				selectorID = R.drawable.selector_calendar_today;
+			}
+
+			tvDay.setBackgroundResource(selectorID);
+			
 			return convertView;
 		}
-
 	}
 
-	class DateHolder {
-		public int year;
-		public int month;
-		public int day;
-		public int weekOfYear;
+	public static class DateHolder {
+		int year;
+		int month;
+		int day;
+		int weekOfYear;
+		TextView tvDay;
+
+		DateHolder() {
+		}
+
+		/**
+		 * @param year
+		 *            1970 - 2100
+		 * @param month
+		 *            0 - 11
+		 * @param day
+		 *            1 - 31
+		 */
+		public DateHolder(int year, int month, int day) {
+			if (year < 1970 || year > 2100)
+				throw new IllegalArgumentException("year must >= 1970 and <=2100");
+			if (month < 0 || month > 11)
+				throw new IllegalArgumentException("month must be 0 - 11");
+			if (day < 1 || day > 31)
+				throw new IllegalArgumentException("day is invalid");
+			this.year = year;
+			this.month = month;
+			this.day = day;
+
+			Calendar calendar = Calendar.getInstance();
+			calendar.setFirstDayOfWeek(Calendar.SUNDAY);
+			calendar.set(this.year, this.month, this.day);
+			setValue(calendar);
+		}
 
 		void setValue(Calendar calendar) {
 			this.year = calendar.get(Calendar.YEAR);
@@ -195,11 +282,23 @@ public class HorizonCalendarView extends ViewPager {
 			this.weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
 		}
 
-		boolean equals(DateHolder o) {
+		public int getYear() {
+			return this.year;
+		}
+
+		public int getMonth() {
+			return this.month;
+		}
+
+		public int getDay() {
+			return this.day;
+		}
+
+		public boolean equals(DateHolder o) {
 			if (o == null) {
 				return false;
 			}
-			if(o == this){
+			if (o == this) {
 				return true;
 			}
 			if (this.year == o.year && this.month == o.month && this.day == o.day) {
@@ -208,7 +307,7 @@ public class HorizonCalendarView extends ViewPager {
 			return false;
 		}
 
-		int compareTo(DateHolder o) {
+		public int compareTo(DateHolder o) {
 			if (o == null) {
 				throw new IllegalArgumentException("the arg is null");
 			}
@@ -233,7 +332,29 @@ public class HorizonCalendarView extends ViewPager {
 
 		@Override
 		public String toString() {
-			return String.format("%1$s年%2$s月%3$s日", this.year, this.month, this.day);
+			return String.format("%1$s年%2$s月%3$s日", this.year, this.month + 1, this.day);
 		}
+	}
+
+	@Override
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		selectedCalendar((GridView) parent, position);
+	}
+
+	private void selectedCalendar(GridView view, int position) {
+		DateHolder selectedDate = ((CalendarItemsAdapter) view.getAdapter()).selectedItem(position);
+		if (currentHolder != null && currentHolder.weekOfYear != selectedDate.weekOfYear) {
+			for (GridView gridView : viewPageList) {
+				if (gridView != view) {
+					((CalendarItemsAdapter) gridView.getAdapter()).clearSelected();
+				}
+			}
+		}
+		
+		if(!selectedDate.equals(currentHolder)){
+			currentHolder = selectedDate;
+			//onSelectedCalendarChanged();
+		}
+		Log.i(TAG, "selected: " + currentHolder);
 	}
 }
