@@ -49,7 +49,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		calendar = Calendar.getInstance();
 		calendar.setFirstDayOfWeek(Calendar.SUNDAY);
 		todayHolder = new DateHolder();
-		todayHolder.setValue(calendar);
+		todayHolder.setValue(calendar, currentHolder);
 		adapter = new CalendarAdpater();
 		this.setAdapter(adapter);
 		setCurrentItem(PAGE_COUNT / 2, true);
@@ -124,7 +124,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 					calendar.add(Calendar.DAY_OF_YEAR, -1 * rollValue);
 				}
 				start = new DateHolder();
-				start.setValue(calendar);
+				start.setValue(calendar, currentHolder);
 			} else {
 				GridView lastView = (GridView) viewPageList[lastPosition % viewPageList.length];
 				CalendarItemsAdapter adapter = (CalendarItemsAdapter) lastView.getAdapter();
@@ -140,7 +140,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 
 	class CalendarItemsAdapter extends BaseAdapter {
 		DateHolder[] dates = new DateHolder[7];
-		private int selectedPosition = -1;
+		// private int selectedPosition = -1;
 
 		public void computeCalendar(DateHolder start, int weekOffset) {
 			Log.i(TAG, "computeCalendar: start=" + start + "; weekOffset=" + weekOffset);
@@ -154,34 +154,34 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 				if (dates[i] == null) {
 					dates[i] = new DateHolder();
 				}
-				dates[i].setValue(calendar);
+				dates[i].setValue(calendar, currentHolder);
 				calendar.add(Calendar.DAY_OF_YEAR, 1);
 
 				Log.i(TAG, "computeCalendar: result[" + i + "] = " + dates[i]);
 			}
 		}
 
-		public void clearSelected() {
-			selectedItem(-1);
-		}
+		// public void clearSelected() {
+		// selectedItem(-1);
+		// }
 
-		public DateHolder selectedItem(int position) {
-			if (position < 0 || position >= dates.length) { // clear selected
-				if (selectedPosition >= 0) { // had selected
-					dates[selectedPosition].tvDay.setSelected(false);
-					selectedPosition = -1;
-				}
-				return null;
-			}
-			if (position != selectedPosition) {
-				dates[position].tvDay.setSelected(true);
-				if (selectedPosition >= 0) {
-					dates[selectedPosition].tvDay.setSelected(false);
-				}
-				selectedPosition = position;
-			}
-			return dates[position];
-		}
+		// public DateHolder selectedItem(int position) {
+		// if (position < 0 || position >= dates.length) { // clear selected
+		// if (selectedPosition >= 0) { // had selected
+		// dates[selectedPosition].tvDay.setSelected(false);
+		// selectedPosition = -1;
+		// }
+		// return null;
+		// }
+		// if (position != selectedPosition) {
+		// dates[position].tvDay.setSelected(true);
+		// if (selectedPosition >= 0) {
+		// dates[selectedPosition].tvDay.setSelected(false);
+		// }
+		// selectedPosition = position;
+		// }
+		// return dates[position];
+		// }
 
 		@Override
 		public int getCount() {
@@ -201,29 +201,19 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			DateHolder date = (DateHolder) getItem(position);
-			
+
 			Log.i(TAG, "getView convertView == null" + (convertView == null) + "date:" + date);
-			
+
 			if (convertView == null) {
 				LayoutInflater inflater = LayoutInflater.from(getContext());
 				convertView = inflater.inflate(R.layout.calendar_item, null);
-			}else{
-				if(date == convertView.getTag()){
-//					
-//					Log.i(TAG, "convertView tag same");
-//					//((TextView) convertView.findViewById(R.id.tv_day)).setSelected(true);
-//					
-					return convertView;
-				}
 			}
-			
-			convertView.setTag(date);
-			
+
 			TextView tvWeekName, tvDay;
-			
+
 			tvWeekName = (TextView) convertView.findViewById(R.id.tv_week_name);
 			tvDay = (TextView) convertView.findViewById(R.id.tv_day);
-			
+
 			tvWeekName.setText(WEEK_NAME[position]);
 			tvDay.setText(String.valueOf(date.day));
 
@@ -235,7 +225,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			}
 
 			tvDay.setBackgroundResource(selectorID);
-			
+
 			return convertView;
 		}
 	}
@@ -272,14 +262,16 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			Calendar calendar = Calendar.getInstance();
 			calendar.setFirstDayOfWeek(Calendar.SUNDAY);
 			calendar.set(this.year, this.month, this.day);
-			setValue(calendar);
+			setValue(calendar, null);
 		}
 
-		void setValue(Calendar calendar) {
+		void setValue(Calendar calendar, DateHolder selectedDate) {
 			this.year = calendar.get(Calendar.YEAR);
 			this.month = calendar.get(Calendar.MONTH);
 			this.day = calendar.get(Calendar.DAY_OF_MONTH);
 			this.weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
+
+			setSelected(this.equals(selectedDate));
 		}
 
 		public int getYear() {
@@ -292,6 +284,12 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 
 		public int getDay() {
 			return this.day;
+		}
+
+		void setSelected(boolean isSelected) {
+			if (tvDay != null && isSelected != tvDay.isSelected()) {
+				tvDay.setSelected(isSelected);
+			}
 		}
 
 		public boolean equals(DateHolder o) {
@@ -334,6 +332,18 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		public String toString() {
 			return String.format("%1$s年%2$s月%3$s日", this.year, this.month + 1, this.day);
 		}
+
+		@Override
+		protected Object clone() {
+			DateHolder obj = new DateHolder();
+			obj.year = this.year;
+			obj.month = this.month;
+			obj.day = this.day;
+			obj.weekOfYear = this.weekOfYear;
+			obj.tvDay = this.tvDay;
+
+			return obj;
+		}
 	}
 
 	@Override
@@ -342,19 +352,30 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 	}
 
 	private void selectedCalendar(GridView view, int position) {
-		DateHolder selectedDate = ((CalendarItemsAdapter) view.getAdapter()).selectedItem(position);
-		if (currentHolder != null && currentHolder.weekOfYear != selectedDate.weekOfYear) {
-			for (GridView gridView : viewPageList) {
-				if (gridView != view) {
-					((CalendarItemsAdapter) gridView.getAdapter()).clearSelected();
-				}
+		DateHolder selectedDate = (DateHolder) ((CalendarItemsAdapter) view.getAdapter()).getItem(position);
+		if (!selectedDate.equals(currentHolder)) {
+			if (currentHolder != null && currentHolder.tvDay != selectedDate.tvDay) {
+				currentHolder.setSelected(false);
 			}
+			selectedDate.setSelected(true);
+
+			currentHolder = (DateHolder) selectedDate.clone();
+			// // onSelectedCalendarChanged();
 		}
-		
-		if(!selectedDate.equals(currentHolder)){
-			currentHolder = selectedDate;
-			//onSelectedCalendarChanged();
-		}
+
+		// if (currentHolder != null && currentHolder.weekOfYear !=
+		// selectedDate.weekOfYear) {
+		// for (GridView gridView : viewPageList) {
+		// if (gridView != view) {
+		// ((CalendarItemsAdapter) gridView.getAdapter()).clearSelected();
+		// }
+		// }
+		// }
+		//
+		// if (!selectedDate.equals(currentHolder)) {
+		// currentHolder = selectedDate;
+		// // onSelectedCalendarChanged();
+		// }
 		Log.i(TAG, "selected: " + currentHolder);
 	}
 }
