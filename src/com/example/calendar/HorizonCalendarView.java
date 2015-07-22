@@ -1,6 +1,7 @@
 package com.example.calendar;
 
 import java.util.Calendar;
+import java.util.Date;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -60,7 +61,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 				LayoutParams.WRAP_CONTENT);
 		GridView gridView = new GridView(getContext());
 		gridView.setNumColumns(7);
-		gridView.setGravity(Gravity.CENTER_VERTICAL);
+		gridView.setGravity(Gravity.CENTER_HORIZONTAL);
 		gridView.setSelector(new ColorDrawable(Color.TRANSPARENT));
 		gridView.setVerticalSpacing(1);
 		gridView.setHorizontalSpacing(1);
@@ -70,10 +71,25 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		return gridView;
 	}
 
-	public void selectDate(DateHolder date) {
-		// if (date == null)
-		// return;
-		// s
+	public void jump2Today() {
+		if (this.getCurrentItem() != PAGE_COUNT / 2) {
+			currentHolder = null;
+			
+			adapter = new CalendarAdpater();
+			this.setAdapter(adapter);
+			setCurrentItem(PAGE_COUNT / 2, true);
+		}
+
+		if (todayHolder.equals(currentHolder)) {
+			return;
+		}
+		if (currentHolder != null && currentHolder.year == todayHolder.year && currentHolder.weekOfYear == todayHolder.weekOfYear) {
+			// 同一周
+			GridView gridView = this.viewPageList[this.getCurrentItem() % this.viewPageList.length];
+			gridView.performItemClick(gridView, todayHolder.dayOfWeek - 1, 0);
+			return;
+		}
+
 	}
 
 	public DateHolder getToday() {
@@ -108,7 +124,11 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			Log.i(TAG, "instantiateItem: position=" + position);
 			GridView item = (GridView) viewPageList[position % viewPageList.length];
 			generateCalendar(item, position);
-			((ViewPager) container).addView(item, 0);
+			try {
+				((ViewPager) container).addView(item, 0);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			return item;
 		}
 
@@ -119,6 +139,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			int weekOffset = 0;
 			if (lastPosition < 0) {
 				// 第一次加载，初始化时间
+				calendar.setTime(new Date());
 				int rollValue = calendar.get(Calendar.DAY_OF_WEEK) - 1;
 				if (rollValue > 0) {
 					calendar.add(Calendar.DAY_OF_YEAR, -1 * rollValue);
@@ -140,7 +161,6 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 
 	class CalendarItemsAdapter extends BaseAdapter {
 		DateHolder[] dates = new DateHolder[7];
-		// private int selectedPosition = -1;
 
 		public void computeCalendar(DateHolder start, int weekOffset) {
 			Log.i(TAG, "computeCalendar: start=" + start + "; weekOffset=" + weekOffset);
@@ -160,28 +180,6 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 				Log.i(TAG, "computeCalendar: result[" + i + "] = " + dates[i]);
 			}
 		}
-
-		// public void clearSelected() {
-		// selectedItem(-1);
-		// }
-
-		// public DateHolder selectedItem(int position) {
-		// if (position < 0 || position >= dates.length) { // clear selected
-		// if (selectedPosition >= 0) { // had selected
-		// dates[selectedPosition].tvDay.setSelected(false);
-		// selectedPosition = -1;
-		// }
-		// return null;
-		// }
-		// if (position != selectedPosition) {
-		// dates[position].tvDay.setSelected(true);
-		// if (selectedPosition >= 0) {
-		// dates[selectedPosition].tvDay.setSelected(false);
-		// }
-		// selectedPosition = position;
-		// }
-		// return dates[position];
-		// }
 
 		@Override
 		public int getCount() {
@@ -213,15 +211,17 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 
 			tvWeekName = (TextView) convertView.findViewById(R.id.tv_week_name);
 			tvDay = (TextView) convertView.findViewById(R.id.tv_day);
+			tvDay.setTag(date);
 
 			tvWeekName.setText(WEEK_NAME[position]);
 			tvDay.setText(String.valueOf(date.day));
 
-			date.tvDay = tvDay;
-
 			int selectorID = R.drawable.selector_calendar_notoday;
 			if (date.equals(todayHolder)) {
 				selectorID = R.drawable.selector_calendar_today;
+				if (currentHolder == null) {
+					selectedCalendar((GridView) parent, convertView, position);
+				}
 			}
 
 			tvDay.setBackgroundResource(selectorID);
@@ -235,6 +235,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		int month;
 		int day;
 		int weekOfYear;
+		int dayOfWeek;
 		TextView tvDay;
 
 		DateHolder() {
@@ -270,6 +271,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			this.month = calendar.get(Calendar.MONTH);
 			this.day = calendar.get(Calendar.DAY_OF_MONTH);
 			this.weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
+			this.dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
 
 			setSelected(this.equals(selectedDate));
 		}
@@ -348,11 +350,15 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		selectedCalendar((GridView) parent, position);
+		selectedCalendar((GridView) parent, view, position);
 	}
 
-	private void selectedCalendar(GridView view, int position) {
-		DateHolder selectedDate = (DateHolder) ((CalendarItemsAdapter) view.getAdapter()).getItem(position);
+	private void selectedCalendar(GridView parent, View view, int position) {
+		DateHolder selectedDate = (DateHolder) ((CalendarItemsAdapter) parent.getAdapter()).getItem(position);
+		if (selectedDate.tvDay == null) {
+			selectedDate.tvDay = (TextView) view.findViewWithTag(selectedDate);
+		}
+
 		if (!selectedDate.equals(currentHolder)) {
 			if (currentHolder != null && currentHolder.tvDay != selectedDate.tvDay) {
 				currentHolder.setSelected(false);
@@ -362,20 +368,6 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			currentHolder = (DateHolder) selectedDate.clone();
 			// // onSelectedCalendarChanged();
 		}
-
-		// if (currentHolder != null && currentHolder.weekOfYear !=
-		// selectedDate.weekOfYear) {
-		// for (GridView gridView : viewPageList) {
-		// if (gridView != view) {
-		// ((CalendarItemsAdapter) gridView.getAdapter()).clearSelected();
-		// }
-		// }
-		// }
-		//
-		// if (!selectedDate.equals(currentHolder)) {
-		// currentHolder = selectedDate;
-		// // onSelectedCalendarChanged();
-		// }
 		Log.i(TAG, "selected: " + currentHolder);
 	}
 }
