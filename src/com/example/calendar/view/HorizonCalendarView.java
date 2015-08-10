@@ -1,7 +1,12 @@
-package com.example.calendar;
+package com.example.calendar.view;
 
 import java.util.Calendar;
 import java.util.Date;
+
+import com.example.calendar.R;
+import com.example.calendar.R.drawable;
+import com.example.calendar.R.id;
+import com.example.calendar.R.layout;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -69,27 +74,6 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 		gridView.setLayoutParams(params);
 		gridView.setOnItemClickListener(this);
 		return gridView;
-	}
-
-	public void jump2Today() {
-		if (this.getCurrentItem() != PAGE_COUNT / 2) {
-			currentHolder = null;
-			
-			adapter = new CalendarAdpater();
-			this.setAdapter(adapter);
-			setCurrentItem(PAGE_COUNT / 2, true);
-		}
-
-		if (todayHolder.equals(currentHolder)) {
-			return;
-		}
-		if (currentHolder != null && currentHolder.year == todayHolder.year && currentHolder.weekOfYear == todayHolder.weekOfYear) {
-			// 同一周
-			GridView gridView = this.viewPageList[this.getCurrentItem() % this.viewPageList.length];
-			gridView.performItemClick(gridView, todayHolder.dayOfWeek - 1, 0);
-			return;
-		}
-
 	}
 
 	public DateHolder getToday() {
@@ -366,7 +350,7 @@ public class HorizonCalendarView extends ViewPager implements AdapterView.OnItem
 			selectedDate.setSelected(true);
 
 			currentHolder = (DateHolder) selectedDate.clone();
-			// // onSelectedCalendarChanged();
+			// onSelectedCalendarChanged();
 		}
 		Log.i(TAG, "selected: " + currentHolder);
 	}

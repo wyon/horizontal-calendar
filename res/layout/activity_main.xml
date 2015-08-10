@@ -2,21 +2,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="${relativePackage}.${activityClass}" >
+    tools:context="${relativePackage}.${activityClass}"
+    android:background="@android:color/background_dark" >
 
-    <com.example.calendar.HorizonCalendarView
-        android:id="@+id/viewpager"
-        android:layout_width="match_parent"
-        android:layout_height="100dp"
-        />
-    
     <Button 
-        android:id="@+id/btn_click"
+        android:id="@+id/btn_click1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="click"
+        android:text="click1"
         android:onClick="btnClick"
         android:layout_alignParentBottom="true"
-        />
+        /> 
+        
+    <Button 
+        android:id="@+id/btn_click2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="click2"
+        android:onClick="btnClick"
+        android:layout_alignParentTop="true"
+        /> 
+
 
 </RelativeLayout>
